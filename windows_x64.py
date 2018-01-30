@@ -1,4 +1,4 @@
-# Virtual Call stack implementation for Linux x86
+# Virtual Call stack implementation for Windows x64
 
 # Virtual stack is represented as a dictionary
 # It does not store values but last instruction that modified given element
@@ -9,7 +9,7 @@
 #  8: <il: store>
 #  16: <il: store>
 # }
-import linux_x86
+import windows_x86
 from binaryninja import LowLevelILOperation
 
 WORD_SIZE = 8
@@ -23,15 +23,13 @@ mapping = {
   'r9':'r9',   'r9d': 'r9',  'r9w':'r9', 'r9b':'r9'
 }
 
-class Stack(linux_x86.Stack):
+class Stack(windows_x86.Stack):
   def __init__(self):
     self.stack = {}
 
     self.registers = {
-      'rdi': None,
-      'rsi': None,
-      'rdx': None,
       'rcx': None,
+      'rdx': None,
       'r8':  None,
       'r9':  None
     }
@@ -71,6 +69,7 @@ class Stack(linux_x86.Stack):
     if store_i.dest.operation == LowLevelILOperation.LLIL_REG:
       dst = store_i.dest.src
       shift = 0
+    '''
     else: # assuming LLIL_ADD for now
       dst = store_i.dest.left.src
       shift = store_i.dest.right.value
@@ -78,12 +77,11 @@ class Stack(linux_x86.Stack):
     if dst.name == 'esp':
       # Place it on the stack
       self.stack[shift] = store_i
+    '''
 
   def __iter__(self):
-    yield self.registers['rdi']
-    yield self.registers['rsi']
-    yield self.registers['rdx']
     yield self.registers['rcx']
+    yield self.registers['rdx']
     yield self.registers['r8']
     yield self.registers['r9']
 

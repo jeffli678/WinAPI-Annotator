@@ -1,0 +1,11 @@
+* Fix "const" params in .json files
+* Remove "opt" from .json files
+
+## Modules to add
+* ntdll.dll...eventually
+* shell32.dll
+* gdi32.dll
+* oleaut32.dll
+* comctl32.dll
+* imm32.dll
+* shlwpi.dll

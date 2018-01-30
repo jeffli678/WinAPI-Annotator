@@ -1,4 +1,4 @@
-# Virtual Call stack implementation for Linux x86
+# Virtual Call stack implementation for Windows x86
 
 # Virtual stack is represented as a dictionary
 # It does not store values but last instruction that modified given element
@@ -20,7 +20,8 @@ class Stack:
     self.stack_changing_llil = [LowLevelILOperation.LLIL_STORE,
                                 LowLevelILOperation.LLIL_PUSH,
                                 LowLevelILOperation.LLIL_POP]
-    self.functions_path = 'all_functions_no_fp.json'
+    self.esp = 00400000
+    self.ebp = 00400000
 
   def get_function_path(self):
     return self.functions_path
@@ -63,16 +64,14 @@ class Stack:
     if store_i.dest.operation == LowLevelILOperation.LLIL_REG:
       dst = store_i.dest.src
       shift = 0
-    else: # assuming LLIL_ADD for now
+    
+    elif store_i.dest.operation != LowLevelILOperation.LLIL_CONST_PTR: # assuming LLIL_ADD for now
       dst = store_i.dest.left.src
       if store_i.dest.right.operation == LowLevelILOperation.LLIL_CONST:
         shift = store_i.dest.right.constant
       else:
         shift = store_i.dest.right.value
-
-    if dst.name == 'esp':
-      # Place it on the stack
-      self.stack[shift] = store_i
+    
 
   def __iter__(self):
     for index in sorted(self.stack):
@@ -83,4 +82,3 @@ class Stack:
     for index in sorted(self.stack):
       s += '{}: {}\n'.format(index, self.stack[index])
 
-    log_info(s)
