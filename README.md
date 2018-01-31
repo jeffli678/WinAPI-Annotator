@@ -1,4 +1,4 @@
-## BinaryNinja Windows-Annotator
+## BinaryNinja Windows API Annotator
 
 Annotate Windows API function call parameters! Big thanks to @carstein for setting the foundation.
 
