@@ -61,17 +61,18 @@ class Stack:
 
   def __process_store(self, store_i):
     # Extracting destination of LLIL_STORE
-    if store_i.dest.operation == LowLevelILOperation.LLIL_REG:
-      dst = store_i.dest.src
-      shift = 0
+    #if store_i.dest.operation == LowLevelILOperation.LLIL_REG:
+      #dst = store_i.dest.src
+    shift = 0
     
-    elif store_i.dest.operation != LowLevelILOperation.LLIL_CONST_PTR: # assuming LLIL_ADD for now
+    '''
+    elif store_i.dest.operation != LowLevelILOperation.LLIL_CONST_PTR:
       dst = store_i.dest.left.src
       if store_i.dest.right.operation == LowLevelILOperation.LLIL_CONST:
         shift = store_i.dest.right.constant
       else:
         shift = store_i.dest.right.value
-    
+    '''
 
   def __iter__(self):
     for index in sorted(self.stack):

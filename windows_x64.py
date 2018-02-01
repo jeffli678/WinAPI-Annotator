@@ -69,14 +69,16 @@ class Stack(windows_x86.Stack):
     if store_i.dest.operation == LowLevelILOperation.LLIL_REG:
       dst = store_i.dest.src
       shift = 0
+
+
     '''
-    else: # assuming LLIL_ADD for now
+    elif store_i.dest.operation != LowLevelILOperation.LLIL_CONST_PTR:
       dst = store_i.dest.left.src
       shift = store_i.dest.right.value
-
-    if dst.name == 'esp':
-      # Place it on the stack
-      self.stack[shift] = store_i
+    
+      if dst.name == 'esp' or dst.name == 'rsp':
+        # Place it on the stack
+        self.stack[shift] = store_i
     '''
 
   def __iter__(self):
