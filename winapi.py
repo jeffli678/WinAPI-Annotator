@@ -46,24 +46,35 @@ def run_plugin(bv, function):
 
   stack_changing_llil =  stack.get_relevant_llil()
 
-  for func in bv.functions:
-    for block in func.low_level_il:
-      for instruction in block:
-        if instruction.operation in stack_changing_llil:
-          stack.update(instruction)
-        if (instruction.operation == LowLevelILOperation.LLIL_CALL and
-            instruction.dest.operation == LowLevelILOperation.LLIL_CONST_PTR):
-          callee = bv.get_function_at(instruction.dest.constant) # Fetching function in question
-          if (callee.symbol.type.name == 'ImportedFunctionSymbol'):
+  for block in function.low_level_il:
+    for instruction in block:
+      if instruction.operation in stack_changing_llil:
+        stack.update(instruction)
+      if (instruction.operation == LowLevelILOperation.LLIL_CALL and
+          instruction.dest.operation == LowLevelILOperation.LLIL_CONST_PTR):
+        callee = bv.get_function_at(instruction.dest.constant) # Fetching function in question
+        if (callee.symbol.type.name == 'ImportedFunctionSymbol'):
+            module_and_function = get_function_name(callee)
+            annotate(module_and_function[0], module_and_function[1], stack, function)
+      elif (instruction.operation == LowLevelILOperation.LLIL_CALL):
+
+        if (instruction.dest.operation == LowLevelILOperation.LLIL_REG and
+            instruction.dest.value.type == RegisterValueType.ImportedAddressValue):
+          iat_address = instruction.dest.value.value
+          try:
+            callee = bv.get_symbol_at(iat_address)
+            if (callee.type.name == 'ImportedFunctionSymbol' or callee.type.name == 'ImportAddressSymbol'):
               module_and_function = get_function_name(callee)
-              annotate(module_and_function[0], module_and_function[1], stack, func)
-        elif (instruction.operation == LowLevelILOperation.LLIL_CALL):
+              annotate(module_and_function[0], module_and_function[1], stack, function)
+          except AttributeError:
+            continue
+        else:
           try:
             iat_address = instruction.dest.src.constant
             callee = bv.get_symbol_at(iat_address)
             if (callee.type.name == 'ImportedFunctionSymbol' or callee.type.name == 'ImportAddressSymbol'):
               module_and_function = get_function_name(callee)
-              annotate(module_and_function[0], module_and_function[1], stack, func)
+              annotate(module_and_function[0], module_and_function[1], stack, function)
           except AttributeError:
             continue
         
