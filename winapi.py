@@ -8,7 +8,7 @@ from binaryninja import *
 MODULES = ['USER32', 'KERNEL32', 'OLE32', 'ADVAPI32']
 
 def load_functions(module_name):
-    folder = os.path.dirname(os.path.abspath(__file__)).split(user_plugin_path)[1].split("/")[1]
+    folder = os.path.dirname(os.path.abspath(__file__)).split(user_plugin_path)[1].replace('\\','/').split("/")[1]
     function_file = open(user_plugin_path + '/' + folder + '/windows_functions/' + module_name + '.json', 'r')
     function_list = json.load(function_file)
     function_file.close()
