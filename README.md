@@ -1,23 +1,17 @@
 ## BinaryNinja Windows API Annotator
 
-Annotate Windows API function call parameters! Big thanks to @carstein for setting the foundation.
+Annotate Windows API function call parameters! This plugin runs over only the selected function instead all functions; this is to prevent significant slow downs. 
 
 ### Supported modules
+
 * kernel32.dll
 * user32.dll
 * ole32.dll
 * advapi32.dll
+* Others
 
-#### Please feel free to submit requests for more modules!
+Please feel free to create issues to request more modules. I wrote a script to parse DLLs for their exprts and query msdn for the function params. It's pretty good at it.
 
 ### Disclaimer
-* I cannot guarentee this project is issue-free
-* More users will help us figure out where the bugs are, and so I'm opening this up already in its alpha-y state
-* I wrote my own WinAPI parser, and so far, I haven't run into any major errors
-    * ...but I can only reverse so many windows binaries in a day, after all
-    * I have seen a few small-ish issues (e.g., missing star characters for pointers, the occasional leftever "_opt"), but PLEASE feel free to let me know of any others you see and I will take care of them
-    * I will also keep working on my parser to make subsequent modules less error-prone
-* One last thing -- this plugin runs over only the selected function instead all functions; this is to prevent significant slow downs 
 
-
-
+The json data is formatted in `sdb` format, created by the radare2 team (see https://radare.gitbooks.io/radare2book/basic_commands/sdb.html for more info). Some of the function param information comes directly from the `types-windows.sdb.txt` file seen [here](https://github.com/radare/radare2/tree/master/libr/anal/d). I used their `sdb` tool to output the database in json format, and then I copied my previous json files into it.
