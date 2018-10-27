@@ -1,80 +1,161 @@
 import json
-import re
-import os
-import windows_x86
-import windows_x64
 from binaryninja import *
+import sys
+import os
 
-MODULES = ['USER32', 'KERNEL32', 'OLE32', 'ADVAPI32']
+calls = [
+  LowLevelILOperation.LLIL_CALL,
+  LowLevelILOperation.LLIL_CALL_STACK_ADJUST,
+]
 
-def load_functions(module_name):
-    folder = os.path.dirname(os.path.abspath(__file__)).split(user_plugin_path)[1].replace('\\','/').split("/")[1]
-    function_file = open(user_plugin_path + '/' + folder + '/windows_functions/' + module_name + '.json', 'r')
-    function_list = json.load(function_file)
-    function_file.close()
-    return function_list
+registers = [
+  'rax',
+  'rbx',
+  'rcx',
+  'rdx',
+  'rsi',
+  'rdi',
+  'r8',
+  'r9',
+  'r10',
+  'r11',
+  'r12',
+  'r13',
+  'r14',
+  'r15',
+  'eax',
+  'ebx',
+  'ecx',
+  'edx',
+  'edi',
+  'esi'
+]
 
-def get_function_name(callee):
-  module_name = re.match('(\S+)\!', callee.name)
-  function_name = re.match('\S+\!(\w+)(@IAT)*?', callee.name)
-  return (module_name, function_name)
+x64_convention = [
+  'rcx',
+  'rdx',
+  'r8',
+  'r9',
+  'ecx',
+  'edx',
+  'r8d',
+  'r9d'
+]
 
-def annotate(module_name, function_name, stack, function):
-   if module_name.group(1) in MODULES:
-      db = load_functions(module_name.group(1))
-      if db.has_key(function_name.group(1)):
-        stack_args = iter(stack)
-        for function_arg in db[function_name.group(1)]:
-          try:
-            stack_instruction = stack_args.next()
-            function.set_comment(stack_instruction.address, function_arg)
-          except StopIteration:
-            log_error('[x] Virtual Stack Empty. Unable to find function arguments for <{}>'.format(function_name))
+class FunctionObj:
+    name = ''
+    argc = 0
+    param_names = []
 
+    def __init__(self, api_func, args, names):
+        self.name = api_func
+        self.argc = args
+        self.param_names = names
+
+def annotate_x64(obj, curr_index, function, sorted_llil):
+    i = 0
+    j = curr_index
+    while (i < obj.argc):
+        if (i < 4):
+            if sorted_llil[j - 1].operation.value == 1 and str(sorted_llil[j - 1].dest) in x64_convention:
+                reg = x64_convention.index(str(sorted_llil[j - 1].dest))
+                if (reg > 3):
+                    reg -= 4
+                function.set_comment(sorted_llil[j - 1].address, obj.param_names[reg])
+                i += 1
+        else:
+            if sorted_llil[j - 1].operation.value == 8:
+                function.set_comment(sorted_llil[j - 1].address, obj.param_names[i])
+                i += 1
+        j -= 1
+
+def annotate_x86(obj, curr_index, function, sorted_llil):
+    i = 0
+    j = curr_index
+    while (i < obj.argc):
+        if sorted_llil[j - 1].operation.value == 8:
+            function.set_comment(sorted_llil[j - 1].address, obj.param_names[i])
+            i += 1
+        j -= 1
+
+def get_func_attr(func):
+    i = 0
+    params = []
+
+    data_dir = os.path.dirname(os.path.realpath(__file__)) 
+
+    with open(data_dir + '/data.json', 'r') as data_file:
+        json_data = json.load(data_file)
+        data_file.close()
+
+    try:
+        argc = json_data['func.' + func + '.args']
+        while (i < argc):
+            params.append(json_data['func.' + func + '.arg.' + str(i)])
+            i += 1
+        obj = FunctionObj(func, argc, params)
+    except:
+        print("[*] ERROR: no parameter data for " + func + " [*]")
+        obj = FunctionObj(func, -1, params)
+
+    return obj
+
+def find_func(index, function):
+    found = 0
+    j = index
+    llil = function.low_level_il
+    dst = str(llil[j].dest)
+
+    while (found == 0):
+        if llil[j - 1].operation.value == 1 and str(llil[j - 1].dest) == dst:
+            symbol = bv.get_symbol_at(llil[j - 1].dest.value.value)
+        j -= 1
+
+    return symbol
+
+def initialize(bv, function):
+
+    sorted_llil = []
+    zipped_llil = []
+    instructions = []
+    wat = []
+    
+    for block in function.low_level_il:
+        for instr in block:
+            instructions.append(instr)
+            wat.append(instr.address)
+    
+    zipped_llil = zip(wat, instructions)
+    zipped_llil.sort()
+    sorted_llil = [instructions for wat, instructions in zipped_llil]
+
+    return sorted_llil 
 
 def run_plugin(bv, function):
-  # logic of stack selection
-  if bv.platform.name == 'windows-x86':
-    stack = windows_x86.Stack()
-  elif bv.platform.name == 'windows-x86_64':
-    stack = windows_x64.Stack()
-  else:
-    log_error('[x] Virtual stack not found for {platform}'.format(platform=bv.platform.name))
-    return -1
 
-  log_info('[*] Annotating function <{name}>'.format(name=function.symbol.name))
+    curr_index = 0
 
-  stack_changing_llil =  stack.get_relevant_llil()
+    sorted_llil = initialize(bv, function)
 
-  for block in function.low_level_il:
-    for instruction in block:
-      if instruction.operation in stack_changing_llil:
-        stack.update(instruction)
-      if (instruction.operation == LowLevelILOperation.LLIL_CALL and
-          instruction.dest.operation == LowLevelILOperation.LLIL_CONST_PTR):
-        callee = bv.get_function_at(instruction.dest.constant) # Fetching function in question
-        if (callee.symbol.type.name == 'ImportedFunctionSymbol'):
-            module_and_function = get_function_name(callee)
-            annotate(module_and_function[0], module_and_function[1], stack, function)
-      elif (instruction.operation == LowLevelILOperation.LLIL_CALL):
+    for instr in sorted_llil:
+        if instr.operation in calls:
+            if (instr.dest.value.type.value != 0):
+                symbol = bv.get_symbol_at(instr.dest.value.value)
+            if symbol:
+                try:
+                    if (symbol.type.value == 1 or symbol.type.value == 2):
+                        winapi_name = symbol.name.split('@')[0]
+                        if str(instr.dest) in registers:
+                            function.set_comment(instr.address, winapi_name + '()')
+                        func_obj = get_func_attr(winapi_name)
+                        if func_obj.argc > 0:
+                            if bv.platform.name == 'windows-x86':
+                                annotate_x86(func_obj, curr_index, function, sorted_llil)
+                            if bv.platform.name == 'windows-x86_64':
+                                annotate_x64(func_obj, curr_index, function, sorted_llil)
+                except:
+                    e = sys.exc_info()[0]
+                    print(e)
+              
+        curr_index += 1
 
-        if (instruction.dest.operation == LowLevelILOperation.LLIL_REG and
-            instruction.dest.value.type == RegisterValueType.ImportedAddressValue):
-          iat_address = instruction.dest.value.value
-          try:
-            callee = bv.get_symbol_at(iat_address)
-            if (callee.type.name == 'ImportedFunctionSymbol' or callee.type.name == 'ImportAddressSymbol'):
-              module_and_function = get_function_name(callee)
-              annotate(module_and_function[0], module_and_function[1], stack, function)
-          except AttributeError:
-            continue
-        else:
-          try:
-            iat_address = instruction.dest.src.constant
-            callee = bv.get_symbol_at(iat_address)
-            if (callee.type.name == 'ImportedFunctionSymbol' or callee.type.name == 'ImportAddressSymbol'):
-              module_and_function = get_function_name(callee)
-              annotate(module_and_function[0], module_and_function[1], stack, function)
-          except AttributeError:
-            continue
-        
