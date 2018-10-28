@@ -1,6 +1,8 @@
 ## BinaryNinja Windows API Annotator
 
-Annotate Windows API function call parameters! This plugin runs over only the selected function instead all functions; this is to prevent significant slow downs. 
+Run this plugin to annotate Windows API function call parameters.
+
+This plugin runs over only the selected function instead all functions; this is to prevent significant slow downs. 
 
 ### Supported modules
 
@@ -8,9 +10,8 @@ Annotate Windows API function call parameters! This plugin runs over only the se
 * user32.dll
 * ole32.dll
 * advapi32.dll
-* Others
 
-Please feel free to create issues to request more modules. I wrote a script to parse DLLs for their exprts and query msdn for the function params. It's pretty good at it.
+Please feel free to create issues to request more modules. I wrote a script to parse DLLs for their exports and query msdn for the function params. It's pretty good at it.
 
 ### Disclaimer
 

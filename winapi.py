@@ -114,20 +114,23 @@ def find_func(index, function):
     return symbol
 
 def initialize(bv, function):
+    """This function orders the llil instructions
+    by address
+    """
 
     sorted_llil = []
     zipped_llil = []
     instructions = []
-    wat = []
+    addrs = []
     
     for block in function.low_level_il:
         for instr in block:
             instructions.append(instr)
-            wat.append(instr.address)
+            addrs.append(instr.address)
     
-    zipped_llil = zip(wat, instructions)
+    zipped_llil = zip(addrs, instructions)
     zipped_llil.sort()
-    sorted_llil = [instructions for wat, instructions in zipped_llil]
+    sorted_llil = [instructions for addrs, instructions in zipped_llil]
 
     return sorted_llil 
 
