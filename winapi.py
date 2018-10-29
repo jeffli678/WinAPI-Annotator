@@ -1,7 +1,7 @@
 import json
-from binaryninja import *
-import sys
 import os
+from binaryninja import LowLevelILOperation, PluginCommand
+from sys import exc_info
 
 calls = [
   LowLevelILOperation.LLIL_CALL,
@@ -137,6 +137,7 @@ def initialize(bv, function):
 def run_plugin(bv, function):
 
     curr_index = 0
+    symbol = None
 
     sorted_llil = initialize(bv, function)
 
@@ -144,7 +145,9 @@ def run_plugin(bv, function):
         if instr.operation in calls:
             if (instr.dest.value.type.value != 0):
                 symbol = bv.get_symbol_at(instr.dest.value.value)
-            if symbol:
+            else: 
+                symbol = -1
+            if symbol > 0:
                 try:
                     if (symbol.type.value == 1 or symbol.type.value == 2):
                         winapi_name = symbol.name.split('@')[0]
@@ -157,7 +160,7 @@ def run_plugin(bv, function):
                             if bv.platform.name == 'windows-x86_64':
                                 annotate_x64(func_obj, curr_index, function, sorted_llil)
                 except:
-                    e = sys.exc_info()[0]
+                    e = exc_info()[0]
                     print(e)
               
         curr_index += 1
